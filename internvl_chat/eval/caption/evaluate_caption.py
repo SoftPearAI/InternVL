@@ -154,7 +154,7 @@ def evaluate_chat_model():
 
         image_ids, captions = [], []
         for _, (pixel_values, ids, _, _) in tqdm(enumerate(dataloader)):
-            pixel_values = pixel_values.to(torch.float16).cuda()
+            pixel_values = pixel_values.to(torch.bfloat16).cuda()
             generation_config = dict(
                 num_beams=args.num_beams,
                 max_new_tokens=ds_collections[ds_name]['max_new_tokens'],
@@ -222,7 +222,6 @@ def evaluate_chat_model():
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--datasets', type=str, default='coco,flickr30k,nocaps')
@@ -235,6 +234,8 @@ if __name__ == '__main__':
     parser.add_argument('--dynamic', action='store_true')
     parser.add_argument('--max-num', type=int, default=6)
     parser.add_argument('--load-in-8bit', action='store_true')
+    parser.add_argument('--load-in-4bit', action='store_true')
+    parser.add_argument('--auto', action='store_true')
     args = parser.parse_args()
 
     if not os.path.exists(args.out_dir):
@@ -252,11 +253,14 @@ if __name__ == '__main__':
 
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
+    if args.auto:
+        os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+    kwargs = {'device_map': 'auto'} if args.auto else {}
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, trust_remote_code=True, use_fast=False)
     model = InternVLChatModel.from_pretrained(
-        args.checkpoint, low_cpu_mem_usage=True, torch_dtype=torch.float16,
-        load_in_8bit=args.load_in_8bit).eval()
-    if not args.load_in_8bit:
+        args.checkpoint, low_cpu_mem_usage=True, torch_dtype=torch.bfloat16,
+        load_in_8bit=args.load_in_8bit, load_in_4bit=args.load_in_4bit, **kwargs).eval()
+    if not args.load_in_8bit and not args.load_in_4bit and not args.auto:
         model = model.cuda()
     image_size = model.config.force_image_size or model.config.vision_config.image_size
     use_thumbnail = model.config.use_thumbnail

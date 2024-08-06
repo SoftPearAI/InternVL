@@ -37,8 +37,8 @@ srun -p ${PARTITION} \
   --quotatype=${QUOTA_TYPE} \
   ${SRUN_ARGS} \
   python -u internvl/train/internvl_chat_finetune.py \
-  --vision_path "./pretrained/intern_vit_6b_448px_v1_2" \
-  --mlp_path "./pretrained/intern_vit_6b_448px_v1_2/mlp_projector.pth" \
+  --vision_path "./pretrained/InternViT-6B-448px-V1-2" \
+  --mlp_path "./pretrained/InternViT-6B-448px-V1-2/mlp_projector/hermes_2_yi_34b.pth" \
   --llm_path "./pretrained/Nous-Hermes-2-Yi-34B" \
   --conv_style "Hermes-2" \
   --output_dir ${OUTPUT_DIR} \
@@ -71,6 +71,6 @@ srun -p ${PARTITION} \
   --do_train True \
   --grad_checkpoint True \
   --group_by_length True \
-  --deepspeed "zero_stage3_config.json" \
+  --deepspeed "zero_stage3_config_34b.json" \
   --report_to "tensorboard" \
   2>&1 | tee -a "${OUTPUT_DIR}/training_log.txt"

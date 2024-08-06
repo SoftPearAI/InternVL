@@ -11,6 +11,7 @@ from data_utils import CAT_SHORT2LONG, process_single_sample
 from datasets import concatenate_datasets, load_dataset
 from internvl.model.internvl_chat import InternVLChatModel
 from internvl.train.dataset import build_transform, dynamic_preprocess
+from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -18,19 +19,19 @@ from transformers import AutoTokenizer
 ds_collections = {
     'MMMU_validation': {
         'root': 'MMMU/MMMU',
-        'max_new_tokens': 100,
+        'max_new_tokens': 10,
         'min_new_tokens': 1,
         'split': 'validation'
     },
     'MMMU_test': {
         'root': 'MMMU/MMMU',
-        'max_new_tokens': 100,
+        'max_new_tokens': 10,
         'min_new_tokens': 1,
         'split': 'test'
     },
     'MMMU_dev': {
         'root': 'MMMU/MMMU',
-        'max_new_tokens': 100,
+        'max_new_tokens': 10,
         'min_new_tokens': 1,
         'split': 'dev'
     },
@@ -90,9 +91,13 @@ class MMMUDataset(torch.utils.data.Dataset):
             images = []
             for idx, pil_image in enumerate(pil_images):
                 if pil_image is not None:
-                    pil_image = dynamic_preprocess(pil_image, image_size=self.input_size,
-                                                   use_thumbnail=self.use_thumbnail,
-                                                   max_num=self.max_num)
+                    if idx == 0:
+                        pil_image = pil_image.resize((pil_image.width * 2, pil_image.height * 2), Image.BILINEAR)
+                        pil_image = dynamic_preprocess(pil_image, image_size=self.input_size,
+                                                       use_thumbnail=self.use_thumbnail, max_num=self.max_num)
+                    else:
+                        pil_image = dynamic_preprocess(pil_image, image_size=self.input_size,
+                                                       use_thumbnail=self.use_thumbnail, max_num=1)
                     images += pil_image
         else:
             images = [pil_images[0]]
@@ -261,6 +266,8 @@ if __name__ == '__main__':
     parser.add_argument('--dynamic', action='store_true')
     parser.add_argument('--max-num', type=int, default=6)
     parser.add_argument('--load-in-8bit', action='store_true')
+    parser.add_argument('--load-in-4bit', action='store_true')
+    parser.add_argument('--auto', action='store_true')
     args = parser.parse_args()
 
     if not os.path.exists(args.out_dir):
@@ -278,11 +285,14 @@ if __name__ == '__main__':
 
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
+    if args.auto:
+        os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+    kwargs = {'device_map': 'auto'} if args.auto else {}
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, trust_remote_code=True, use_fast=False)
     model = InternVLChatModel.from_pretrained(
         args.checkpoint, low_cpu_mem_usage=True, torch_dtype=torch.bfloat16,
-        load_in_8bit=args.load_in_8bit).eval()
-    if not args.load_in_8bit:
+        load_in_8bit=args.load_in_8bit, load_in_4bit=args.load_in_4bit, **kwargs).eval()
+    if not args.load_in_8bit and not args.load_in_4bit and not args.auto:
         model = model.cuda()
     image_size = model.config.force_image_size or model.config.vision_config.image_size
     use_thumbnail = model.config.use_thumbnail

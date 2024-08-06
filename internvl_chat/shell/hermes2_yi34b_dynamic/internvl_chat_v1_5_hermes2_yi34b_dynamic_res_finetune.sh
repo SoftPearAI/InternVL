@@ -37,7 +37,7 @@ srun -p ${PARTITION} \
   --quotatype=${QUOTA_TYPE} \
   ${SRUN_ARGS} \
   python -u internvl/train/internvl_chat_finetune.py \
-  --model_name_or_path "./work_dirs/internvl_chat_v1_5_hermes2_yi34b_dynamic_res_pretrain/" \
+  --model_name_or_path "./work_dirs/internvl_chat_v1_5_hermes2_yi34b_dynamic_res_pretrain" \
   --conv_style "Hermes-2" \
   --output_dir ${OUTPUT_DIR} \
   --meta_path "path/to/finetune/data.json" \
@@ -73,6 +73,6 @@ srun -p ${PARTITION} \
   --dynamic_image_size True \
   --use_thumbnail True \
   --ps_version 'v2' \
-  --deepspeed "zero_stage3_config.json" \
+  --deepspeed "zero_stage3_config_34b.json" \
   --report_to "tensorboard" \
   2>&1 | tee -a "${OUTPUT_DIR}/training_log.txt"

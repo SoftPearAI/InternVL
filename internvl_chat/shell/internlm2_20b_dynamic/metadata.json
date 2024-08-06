@@ -1,0 +1,9 @@
+{
+    "your-custom-dataset-1": {
+      "root": "/home/danielko/data/llava_1600_labeled_img_tagged_v3.0/",
+      "annotation": "/home/danielko/data/llava_1600_labeled_img_tagged_v3.0/train_captions_with_prompt.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": "1604"
+    }
+}
