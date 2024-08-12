@@ -1,0 +1,9 @@
+{
+    "llava_2600_labeled_img_v5.0": {
+      "root": "../../CogVLM2_finetune/data/llava_2600_labeled_img_v5.0",
+      "annotation": "../../CogVLM2_finetune/data/llava_2600_labeled_img_v5.0/train_captions_with_instructions.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 2472
+    }
+  }
