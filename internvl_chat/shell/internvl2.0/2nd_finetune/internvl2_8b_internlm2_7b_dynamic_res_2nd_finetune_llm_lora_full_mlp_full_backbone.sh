@@ -1,15 +1,16 @@
 set -x
 
 GPUS=${GPUS:-2}
-BATCH_SIZE=${BATCH_SIZE:-16}
-PER_DEVICE_BATCH_SIZE=${PER_DEVICE_BATCH_SIZE:-4}
+BATCH_SIZE=${BATCH_SIZE:-32}
+PER_DEVICE_BATCH_SIZE=${PER_DEVICE_BATCH_SIZE:-8}
 GRADIENT_ACC=$((BATCH_SIZE / PER_DEVICE_BATCH_SIZE / GPUS))
 
-
+export PYTHONWARNINGS="ignore::FutureWarning"
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 export MASTER_PORT=34229
 export TF_CPP_MIN_LOG_LEVEL=3
 export LAUNCHER=pytorch
+export WANDB_PROJECT="internvl2"
 
 OUTPUT_DIR='work_dirs/internvl_chat_v2_0/internvl2_8b_internlm2_7b_dynamic_res_2nd_finetune_llm_lora_full_mlp_full_backbone'
 
@@ -29,11 +30,13 @@ torchrun \
   --nproc_per_node=${GPUS} \
   --master_port=${MASTER_PORT} \
   internvl/train/internvl_chat_finetune.py \
+  --run_name internvl2_8b_internlm2_7b_dynamic_res_2nd_finetune_llm_lora_full_mlp_full_backbone \
   --model_name_or_path "OpenGVLab/InternVL2-8B" \
   --conv_style "internlm2-chat" \
   --output_dir ${OUTPUT_DIR} \
-  --meta_path "./shell/data/llava_2600_labeled_img_v5.0_train.json" \
-  --eval_meta_path "./shell/data/llava_2600_labeled_img_v5.0_val.json" \
+  --meta_path "./shell/data/llava_6200_labeled_img_v6.0_train.json" \
+  --eval_meta_path "./shell/data/llava_6200_labeled_img_v6.0_val.json" \
+  --test_meta_path "./shell/data/llava_6200_labeled_img_v6.0_test.json" \
   --overwrite_output_dir True \
   --force_image_size 448 \
   --max_dynamic_patch 6 \
@@ -49,10 +52,10 @@ torchrun \
   --num_train_epochs 5 \
   --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
   --gradient_accumulation_steps ${GRADIENT_ACC} \
-  --evaluation_strategy "no" \
-  --save_strategy "steps" \
-  --save_steps 200 \
-  --save_total_limit 1 \
+  --evaluation_strategy "epoch" \
+  --save_strategy "epoch" \
+  --save_total_limit 3 \
+  --load_best_model_at_end True \
   --learning_rate 4e-5 \
   --weight_decay 0.01 \
   --warmup_ratio 0.03 \
@@ -61,6 +64,7 @@ torchrun \
   --max_seq_length 4096 \
   --do_train True \
   --do_eval True \
+  --do_test True \
   --grad_checkpoint True \
   --group_by_length True \
   --dynamic_image_size True \

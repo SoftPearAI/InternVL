@@ -205,6 +205,16 @@ class DataTrainingArguments:
         default=None,
         metadata={'help': 'The path of the meta file of eval datasets.'},
     )
+    test_meta_path: Optional[str] = field(
+        default=None,
+        metadata={'help': 'The path of the meta file of test datasets.'},
+    )
+    do_test: Optional[bool] = field(
+        default=False,
+        metadata={'help': 'Set to True to perform testing.'},
+    )
+
+
 
 
 class LazySupervisedDataset(Dataset):
@@ -781,7 +791,7 @@ def main():
             dynamic_image_size=data_args.dynamic_image_size, use_thumbnail=data_args.use_thumbnail,
             min_dynamic_patch=data_args.min_dynamic_patch, max_dynamic_patch=data_args.max_dynamic_patch,
             normalize_type=data_args.normalize_type)
-
+    
     def _freeze_params(module):
         for param in module.parameters():
             param.requires_grad = False
@@ -855,6 +865,26 @@ def main():
         trainer.log_metrics('train', metrics)
         trainer.save_metrics('train', metrics)
         trainer.save_state()
+
+    
+    logger.info('Starting testing...')
+    test_data_args = deepcopy(data_args)
+    test_data_args.meta_path = data_args.test_meta_path
+    test_dataset = build_datasets(
+        test_data_args, tokenizer, tcs_loader, model, group_by_length=training_args.group_by_length,
+        dynamic_image_size=data_args.dynamic_image_size, use_thumbnail=data_args.use_thumbnail,
+        min_dynamic_patch=data_args.min_dynamic_patch, max_dynamic_patch=data_args.max_dynamic_patch,
+        normalize_type=data_args.normalize_type)
+
+    test_metrics = trainer.evaluate(test_dataset=test_dataset)
+    try:
+        test_metrics['test_samples'] = len(test_dataset)
+    except:
+        test_metrics['test_samples'] = -1
+
+    trainer.log_metrics('test', test_metrics)
+    trainer.save_metrics('test', test_metrics)
+    logger.info('Testing finished.')
 
 
 if __name__ == '__main__':

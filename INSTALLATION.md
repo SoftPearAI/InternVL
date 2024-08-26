@@ -30,6 +30,7 @@
 
   ```bash
   pip install -r requirements/clip_benchmark.txt
+  cp elastic_agent.py {PATH_TO_MINICONDA}/envs/internvl/lib/python3.9/site-packages/deepspeed/elasticity/elastic_agent.py
   ```
 
 ### Additional Instructions
