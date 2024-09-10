@@ -5,7 +5,7 @@ import argparse
 
 argparse = argparse.ArgumentParser()
 argparse.add_argument("input_path", type=str, help="Path to the input model")
-argparse.add_argument("output_path", type=str, help="Path to the output model")
+argparse.add_argument("--output_path", default=None, type=str, help="Path to the output model")
 args = argparse.parse_args()
 
 print("Loading model...")
@@ -23,8 +23,13 @@ if model.config.use_llm_lora:
     model.language_model = model.language_model.model
     model.config.use_llm_lora = 0
 
+if args.output_path is None:
+    output_path = args.input_path + '-merged'
+else:
+    output_path = args.output_path
+print(output_path)
 print("Saving model...")
-model.save_pretrained(args.output_path)
+model.save_pretrained(output_path)
 print("Saving tokenizer...")
-tokenizer.save_pretrained(args.output_path)
+tokenizer.save_pretrained(output_path)
 print("Done!")

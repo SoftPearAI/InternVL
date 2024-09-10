@@ -1,0 +1,9 @@
+{
+    "llava_6200_labeled_img_v6.0_test": {
+      "root": "../../CogVLM2_finetune/data/llava_9k+pseudo30k_labeled_img_v7.1",
+      "annotation": "../../CogVLM2_finetune/data/llava_9k+pseudo30k_labeled_img_v7.1/test_captions_refined.jsonl",
+      "data_augment": false,
+      "repeat_time": 1,
+      "length": 1
+    }
+  }

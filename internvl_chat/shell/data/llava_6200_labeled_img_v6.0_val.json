@@ -1,7 +1,7 @@
 {
     "llava_6200_labeled_img_v6.0_val": {
       "root": "../../CogVLM2_finetune/data/llava_6200_labeled_img_v6.0",
-      "annotation": "../../CogVLM2_finetune/data/llava_6200_labeled_img_v6.0/val_captions.jsonl",
+      "annotation": "../../CogVLM2_finetune/data/llava_6200_labeled_img_v6.0/test_captions.jsonl",
       "data_augment": false,
       "repeat_time": 1,
       "length": 2472

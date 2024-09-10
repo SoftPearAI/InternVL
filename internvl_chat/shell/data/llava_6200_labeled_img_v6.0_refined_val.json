@@ -1,5 +1,5 @@
 {
-    "llava_6200_labeled_img_v6.0_test": {
+    "llava_6200_labeled_img_v6.0_val": {
       "root": "../../CogVLM2_finetune/data/llava_6200_labeled_img_v6.0",
       "annotation": "../../CogVLM2_finetune/data/llava_6200_labeled_img_v6.0/test_captions_refined.jsonl",
       "data_augment": false,

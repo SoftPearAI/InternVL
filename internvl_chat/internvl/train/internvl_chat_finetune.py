@@ -45,10 +45,12 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils.logging import (enable_default_handler,
                                         enable_explicit_format, set_verbosity)
 
+from aac_metrics import Evaluate
+
+
 # Apply necessary patches for the transformers library
 replace_llama_rmsnorm_with_fused_rmsnorm()
 replace_train_sampler()
-
 # Try to import petrel_client for image loading, fallback to PIL if unavailable
 try:
     from petrel_client.client import Client
@@ -265,6 +267,7 @@ class LazySupervisedDataset(Dataset):
 
         with open(meta['annotation'], 'r') as f:
             self.raw_data = f.readlines()
+
             if repeat_time < 1:
                 # If repeat_time is less than 1, select a portion of the data
                 self.raw_data = self.raw_data[:int(len(self.raw_data) * repeat_time)]
@@ -837,6 +840,38 @@ def main():
     if model_args.use_custom_trainer:
         replace_create_optimizer()
 
+        
+    def preprocess_logits_for_metrics(logits, labels):
+        """
+        Original Trainer may have a memory leak. 
+        This is a workaround to avoid storing too many tensors that are not needed.
+        """
+        pred_ids = torch.argmax(logits, dim=-1)
+        return pred_ids, labels
+    
+    def compute_metrics(eval_preds):
+        # val_evaluate = Evaluate(metrics=["bleu", "cider_d", SPICE(java_max_memory = '32G')])
+        val_evaluate = Evaluate(metrics=["bleu", "cider_d"])
+        
+        labels_ids = eval_preds.label_ids
+        pred_ids = eval_preds.predictions
+        if isinstance(pred_ids, tuple):
+            pred_ids = pred_ids[0]
+        
+        pred_ids[pred_ids == -100] = tokenizer.pad_token_id
+        pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
+
+        print(pred_str)
+        
+        labels_ids[labels_ids == -100] = tokenizer.pad_token_id
+        label_str = tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
+
+        val_pred_captions = [c.replace("\n", " ").replace("\r", "") for c in pred_str]
+        val_gt_captions = [[c.replace("\n", " ").replace("\r", "")] for c in label_str]
+        corpus_scores, _ = val_evaluate(val_pred_captions, val_gt_captions)
+        
+        return corpus_scores
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -867,24 +902,24 @@ def main():
         trainer.save_state()
 
     
-    logger.info('Starting testing...')
-    test_data_args = deepcopy(data_args)
-    test_data_args.meta_path = data_args.test_meta_path
-    test_dataset = build_datasets(
-        test_data_args, tokenizer, tcs_loader, model, group_by_length=training_args.group_by_length,
-        dynamic_image_size=data_args.dynamic_image_size, use_thumbnail=data_args.use_thumbnail,
-        min_dynamic_patch=data_args.min_dynamic_patch, max_dynamic_patch=data_args.max_dynamic_patch,
-        normalize_type=data_args.normalize_type)
+    # logger.info('Starting testing...')
+    # test_data_args = deepcopy(data_args)
+    # test_data_args.meta_path = data_args.test_meta_path
+    # test_dataset = build_datasets(
+    #     test_data_args, tokenizer, tcs_loader, model, group_by_length=training_args.group_by_length,
+    #     dynamic_image_size=data_args.dynamic_image_size, use_thumbnail=data_args.use_thumbnail,
+    #     min_dynamic_patch=data_args.min_dynamic_patch, max_dynamic_patch=data_args.max_dynamic_patch,
+    #     normalize_type=data_args.normalize_type)
 
-    test_metrics = trainer.evaluate(test_dataset=test_dataset)
-    try:
-        test_metrics['test_samples'] = len(test_dataset)
-    except:
-        test_metrics['test_samples'] = -1
+    # test_metrics = trainer.evaluate(test_dataset=test_dataset)
+    # try:
+    #     test_metrics['test_samples'] = len(test_dataset)
+    # except:
+    #     test_metrics['test_samples'] = -1
 
-    trainer.log_metrics('test', test_metrics)
-    trainer.save_metrics('test', test_metrics)
-    logger.info('Testing finished.')
+    # trainer.log_metrics('test', test_metrics)
+    # trainer.save_metrics('test', test_metrics)
+    # logger.info('Testing finished.')
 
 
 if __name__ == '__main__':
